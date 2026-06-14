@@ -47,6 +47,29 @@ function cdp_render_products_page() {
         } elseif (!isset($upload) || !is_wp_error($upload)) echo '<div class="error"><p>Product, title, and either file or URL are required.</p></div>';
     }
 
+    if (isset($_POST['cdp_replace_version_file'])) {
+        check_admin_referer('cdp_replace_version_file');
+        $version_id = absint($_POST['version_id'] ?? 0);
+        $version = $version_id ? $wpdb->get_row($wpdb->prepare("SELECT id, file_path FROM $versions WHERE id=%d", $version_id)) : null;
+        if (!$version || empty($_FILES['replacement_file']['name'])) {
+            echo '<div class="error"><p>Valid version and replacement file are required.</p></div>';
+        } else {
+            $upload = cdp_safe_file_upload($_FILES['replacement_file'], 'downloads');
+            if (is_wp_error($upload)) {
+                echo '<div class="error"><p>'.esc_html($upload->get_error_message()).'</p></div>';
+            } else {
+                $updated = $wpdb->update($versions, ['file_path'=>$upload['path'],'file_name'=>$upload['name'],'file_size'=>$upload['size'],'updated_at'=>current_time('mysql')], ['id'=>$version_id], ['%s','%s','%d','%s'], ['%d']);
+                if ($updated === false) {
+                    cdp_delete_protected_file($upload['path']);
+                    echo '<div class="error"><p>Could not update the version record. Replacement file was removed.</p></div>';
+                } else {
+                    cdp_delete_protected_file($version->file_path);
+                    echo '<div class="updated"><p>Version file replaced. Existing assignments still use the same version ID.</p></div>';
+                }
+            }
+        }
+    }
+
     if (isset($_POST['cdp_delete_product'])) { check_admin_referer('cdp_delete_product'); $id=absint($_POST['product_id']); $wpdb->delete($products,['id'=>$id]); echo '<div class="updated"><p>Product deleted from catalog. Existing files are kept.</p></div>'; }
     if (isset($_POST['cdp_delete_version'])) { check_admin_referer('cdp_delete_version'); $id=absint($_POST['version_id']); $wpdb->delete($versions,['id'=>$id]); echo '<div class="updated"><p>Version deleted from catalog. Existing file is kept.</p></div>'; }
     if (isset($_POST['cdp_delete_asset'])) { check_admin_referer('cdp_delete_asset'); $id=absint($_POST['asset_id']); $wpdb->delete($assets,['id'=>$id]); echo '<div class="updated"><p>Asset deleted from catalog. Existing file is kept.</p></div>'; }
@@ -64,7 +87,7 @@ function cdp_render_products_page() {
 
     <h2>Products</h2><table class="widefat striped"><thead><tr><th>ID</th><th>Title</th><th>Description</th><th>Action</th></tr></thead><tbody><?php foreach($product_rows as $p): ?><tr><td><?php echo esc_html($p->id); ?></td><td><?php echo esc_html($p->title); ?></td><td><?php echo esc_html(wp_trim_words($p->description,20)); ?></td><td><form method="post"><?php wp_nonce_field('cdp_delete_product'); ?><input type="hidden" name="product_id" value="<?php echo esc_attr($p->id); ?>"><button class="button" name="cdp_delete_product" value="1" onclick="return confirm('Delete product catalog record? Files are kept.');">Delete</button></form></td></tr><?php endforeach; ?></tbody></table>
 
-    <h2>Versions / Downloads</h2><table class="widefat striped"><thead><tr><th>ID</th><th>Product</th><th>Version</th><th>Release Date</th><th>File</th><th>Latest</th><th>Action</th></tr></thead><tbody><?php foreach($version_rows as $v): ?><tr><td><?php echo esc_html($v->id); ?></td><td><?php echo esc_html($v->product_title); ?></td><td><?php echo esc_html($v->version_label); ?></td><td><?php echo esc_html($v->release_date); ?></td><td><?php echo esc_html($v->file_name); ?></td><td><?php echo $v->is_latest ? 'Yes':'No'; ?></td><td><form method="post"><?php wp_nonce_field('cdp_delete_version'); ?><input type="hidden" name="version_id" value="<?php echo esc_attr($v->id); ?>"><button class="button" name="cdp_delete_version" value="1">Delete</button></form></td></tr><?php endforeach; ?></tbody></table>
+    <h2>Versions / Downloads</h2><table class="widefat striped"><thead><tr><th>ID</th><th>Product</th><th>Version</th><th>Release Date</th><th>File</th><th>Latest</th><th>Action</th></tr></thead><tbody><?php foreach($version_rows as $v): ?><tr><td><?php echo esc_html($v->id); ?></td><td><?php echo esc_html($v->product_title); ?></td><td><?php echo esc_html($v->version_label); ?></td><td><?php echo esc_html($v->release_date); ?></td><td><?php echo esc_html($v->file_name); ?></td><td><?php echo $v->is_latest ? 'Yes':'No'; ?></td><td><form method="post" enctype="multipart/form-data" style="margin-bottom:8px;"><?php wp_nonce_field('cdp_replace_version_file'); ?><input type="hidden" name="version_id" value="<?php echo esc_attr($v->id); ?>"><input type="file" name="replacement_file" required> <button class="button" name="cdp_replace_version_file" value="1" onclick="return confirm('Replace this version file and delete the old file? Existing assignments will keep using this version ID.');">Replace File</button></form><form method="post"><?php wp_nonce_field('cdp_delete_version'); ?><input type="hidden" name="version_id" value="<?php echo esc_attr($v->id); ?>"><button class="button" name="cdp_delete_version" value="1">Delete</button></form></td></tr><?php endforeach; ?></tbody></table>
 
     <h2>Assets</h2><table class="widefat striped"><thead><tr><th>ID</th><th>Product</th><th>Type</th><th>Title</th><th>File/URL</th><th>Action</th></tr></thead><tbody><?php foreach($asset_rows as $a): ?><tr><td><?php echo esc_html($a->id); ?></td><td><?php echo esc_html($a->product_title); ?></td><td><?php echo esc_html($a->asset_type); ?></td><td><?php echo esc_html($a->title); ?></td><td><?php echo esc_html($a->file_name ?: $a->external_url); ?></td><td><form method="post"><?php wp_nonce_field('cdp_delete_asset'); ?><input type="hidden" name="asset_id" value="<?php echo esc_attr($a->id); ?>"><button class="button" name="cdp_delete_asset" value="1">Delete</button></form></td></tr><?php endforeach; ?></tbody></table></div><?php
 }

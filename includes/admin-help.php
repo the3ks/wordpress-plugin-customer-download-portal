@@ -74,8 +74,8 @@ function cdp_render_help_page() {
                 <h2>Documentation</h2>
                 <ul>
                     <li>External documentation, video, and knowledge base URLs are visible to assigned customers.</li>
-                    <li>Protected documentation file uploads are stored, but this version does not expose a secure asset download handler.</li>
-                    <li>Use external URLs for customer-visible documentation until secure asset downloads are added.</li>
+                    <li>Protected documentation file uploads are shown as secure download links to assigned logged-in customers.</li>
+                    <li>External URLs can still be used for documentation, videos, and knowledge base pages hosted elsewhere.</li>
                 </ul>
             </div>
 

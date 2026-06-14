@@ -76,7 +76,7 @@ Supported asset fields:
 - External URL
 - Sort order
 
-In the current implementation, external URL assets are directly visible to customers. Uploaded protected documentation files are stored but not exposed through a separate secure asset-download handler yet.
+External URL assets are directly visible to customers. Uploaded protected documentation files are served through a secure asset-download handler that requires the customer to be logged in and assigned to the product.
 
 ### Support Tickets
 
@@ -343,7 +343,6 @@ Optional behavior:
 ## Known Limitations in v2.0.0
 
 - Admin screens are intentionally simple and use WordPress user IDs instead of searchable user selectors.
-- Documentation file uploads are stored but not yet served through a separate secure asset-download handler.
 - No built-in ticketing engine.
 - No bulk assignment.
 - No CSV import/export.

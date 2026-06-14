@@ -31,6 +31,9 @@ register_deactivation_hook(__FILE__, 'cdp_deactivate_plugin');
 add_action('admin_init', 'cdp_maybe_upgrade_plugin');
 add_action('admin_menu', 'cdp_register_admin_menu');
 add_action('init', 'cdp_handle_download_request');
+if (function_exists('cdp_handle_asset_download_request')) {
+    add_action('init', 'cdp_handle_asset_download_request');
+}
 add_shortcode('customer_downloads', 'cdp_customer_downloads_shortcode');
 
 function cdp_register_admin_menu() {
